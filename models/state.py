@@ -1,13 +1,5 @@
 #!/usr/bin/python3
-
-"""
-This module defines State class to store a state informations
-
-Classes :
-    State : inherits from BaseModel
-    to store more information related to a state
-"""
-
+"""This is the state class"""
 from sqlalchemy.ext.declarative import declarative_base
 from models.base_model import BaseModel, Base
 from sqlalchemy.orm import relationship
@@ -18,14 +10,11 @@ import shlex
 
 
 class State(BaseModel, Base):
+    """This is the class for State
+    Attributes:
+        name: input name
     """
-    a class to store state informations
-
-    Args:
-        name (string): the name of the state
-    """
-
-     __tablename__ = "states"
+    __tablename__ = "states"
     name = Column(String(128), nullable=False)
     cities = relationship("City", cascade='all, delete, delete-orphan',
                           backref="state")
