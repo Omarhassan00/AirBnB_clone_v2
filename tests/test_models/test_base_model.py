@@ -1,337 +1,223 @@
 #!/usr/bin/python3
-"""
-This module uses unittest to test BaseModel class
-"""
-
-import unittest
-import uuid
-import os
-import json
-from models import storage
-from datetime import datetime
+""" """
 from models.base_model import BaseModel
+import unittest
+import datetime
+from uuid import UUID
+import json
+import os
+import pycodestyle
 
 
-class TestBaseModel(unittest.TestCase):
+class test_basemodel(unittest.TestCase):
+    """ """
+
+    def __init__(self, *args, **kwargs):
+        """ """
+        super().__init__(*args, **kwargs)
+        self.name = 'BaseModel'
+        self.value = BaseModel
     """
-    To run all the possible tests of BaseModel class
-    using unittest
-    """
+    A class to test pep8 on base_model file"""
+    def test_pycodestyle(self):
+        """
+        Test pep8 format
+        """
+        pycostyle = pycodestyle.StyleGuide(quiet=True)
+        result = pycostyle.check_files(['models/base_model.py'])
+        self.assertEqual(result.total_errors, 0,
+                         "Found code style errors (and warnings).")
 
     def setUp(self):
-        """ starts a new connection """
-
-        setattr(storage, "_FileStorage__objects", {})
+        """ """
         pass
 
     def tearDown(self):
-        """ Removes all the connections (restoring the initial state)"""
-
-        if os.path.exists('file.json'):
+        try:
             os.remove('file.json')
-        pass
+        except:
+            pass
 
-    def test_BaseModel_type(self):
-        """ What is a BaseModel """
+    def test_default(self):
+        """ """
+        i = self.value()
+        self.assertEqual(type(i), self.value)
 
-        basemodel_type = "<class 'models.base_model.BaseModel'>"
-        self.assertEqual(str(BaseModel), basemodel_type)
+    def test_kwargs(self):
+        """ """
+        i = self.value()
+        copy = i.to_dict()
+        new = BaseModel(**copy)
+        self.assertFalse(new is i)
 
-    def test_instance_type(self):
-        """ Is an instance a BaseModel """
+    def test_kwargs_int(self):
+        """ """
+        i = self.value()
+        copy = i.to_dict()
+        copy.update({1: 2})
+        with self.assertRaises(TypeError):
+            new = BaseModel(**copy)
 
-        myBaseModel = BaseModel()
-        self.assertIsInstance(myBaseModel, BaseModel)
+    def test_save(self):
+        """ Testing save """
+        i = self.value()
+        i.save()
+        key = self.name + "." + i.id
+        with open('file.json', 'r') as f:
+            j = json.load(f)
+            self.assertEqual(j[key], i.to_dict())
 
-    def test_BaseModel_attr(self):
-        """ checks if BaseModel has its attributes """
+    def test_str(self):
+        """ """
+        i = self.value()
+        self.assertEqual(str(i), '[{}] ({}) {}'.format(self.name, i.id,
+                         i.__dict__))
 
-        my_model = BaseModel()
-        self.assertTrue(hasattr(my_model, "id"))
-        self.assertTrue(hasattr(my_model, "created_at"))
-        self.assertTrue(hasattr(my_model, "updated_at"))
+    def test_todict(self):
+        """ """
+        i = self.value()
+        n = i.to_dict()
+        self.assertEqual(i.to_dict(), n)
 
-    def test_BaseModel_extra_attr(self):
-        """ checks if BaseModel has the added attributes """
+    def test_kwargs_none(self):
+        """ """
+        n = {None: None}
+        with self.assertRaises(TypeError):
+            new = self.value(**n)
 
-        my_model = BaseModel()
-        my_model.name = 'Betty'
-        my_model.number = 129
-        self.assertTrue(hasattr(my_model, "name"))
-        self.assertTrue(hasattr(my_model, "number"))
+    # def test_kwargs_one(self):
+    #     """ """
+    #     n = {'Name': 'test'}
+    #     with self.assertRaises(KeyError):
+    #         new = self.value(**n)
 
-    def test_instance_attr_type(self):
-        """ checks the types of the puplic instance attributes """
+    def test_id(self):
+        """ """
+        new = self.value()
+        self.assertEqual(type(new.id), str)
 
-        myBaseModel = BaseModel()
-        self.assertEqual(str(type(myBaseModel.id)), "<class 'str'>")
-        datetime_type = "<class 'datetime.datetime'>"
-        self.assertEqual(str(type(myBaseModel.created_at)), datetime_type)
-        self.assertEqual(str(type(myBaseModel.updated_at)), datetime_type)
+    def test_created_at(self):
+        """ """
+        new = self.value()
+        self.assertEqual(type(new.created_at), datetime.datetime)
 
-    def test_init_0_args(self):
-        """ passing zero arguments (no self) """
+    def test_updated_at(self):
+        """ """
+        new = self.value()
+        self.assertEqual(type(new.updated_at), datetime.datetime)
+        n = new.to_dict()
+        new = BaseModel(**n)
+        self.assertFalse(new.created_at == new.updated_at)
 
-        with self.assertRaises(TypeError) as excpt:
-            BaseModel.__init__()
-        excpt_msg = "__init__() missing 1 required positional argument: 'self'"
-        self.assertEqual(str(excpt.exception), excpt_msg)
+    def test_uuid(self):
+        """
+        Testin UUID
+        """
+        instance1 = BaseModel()
+        instance2 = BaseModel()
+        instance3 = BaseModel()
+        list_instances = [instance1, instance2,
+                          instance3]
+        for instance in list_instances:
+            ins_uuid = instance.id
+            with self.subTest(uuid=ins_uuid):
+                self.assertIs(type(ins_uuid), str)
+        self.assertNotEqual(instance1.id, instance2.id)
+        self.assertNotEqual(instance1.id, instance3.id)
+        self.assertNotEqual(instance2.id, instance3.id)
 
-    def test_init_1_arg(self):
-        """ ensures that args do nothing """
-
-        my_model = BaseModel(15)
-        my_model_json = my_model.to_dict()
-        my_new_model = BaseModel(**my_model_json)
-        self.assertEqual(my_model.id, my_new_model.id)
-        self.assertEqual(my_model.created_at, my_new_model.created_at)
-        self.assertEqual(my_model.updated_at, my_new_model.updated_at)
-
-    def test_random_id(self):
-        """ tests if id generated is a uuid """
-
-        my_model = BaseModel()
-        my_new_model = BaseModel()
-        self.assertNotEqual(my_model.id, my_new_model.id)
-        uuid_regex = r'^[\da-f]{8}(-[\da-f]{4}){3}-[\da-f]{12}$'
-        self.assertRegex(my_model.id, uuid_regex)
-        id_to_uuid_type = str(type(uuid.UUID(my_model.id)))
-        self.assertEqual(id_to_uuid_type, "<class 'uuid.UUID'>")
-
-    def test_cmplt_kwargs(self):
-        """ passing a complete dictionary """
-
-        my_dict = {
-            'id': "b6a6e15c-c67d-4312-9a75-9d084935e579",
-            'created_at': '2017-09-28T21:05:54.119427',
-            'updated_at': '2017-09-28T21:05:54.119572'
-        }
-        my_id = "b6a6e15c-c67d-4312-9a75-9d084935e579"
-        my_created_at = datetime.fromisoformat('2017-09-28T21:05:54.119427')
-        my_updated_at = datetime.fromisoformat('2017-09-28T21:05:54.119572')
-        my_model = BaseModel(**my_dict)
-        self.assertEqual(my_model.id, my_id)
-        self.assertEqual(my_model.created_at, my_created_at)
-        self.assertEqual(my_model.updated_at, my_updated_at)
-
-    def test_no_id_kwargs(self):
-        """ passing kwargs without id attribute """
-
-        my_dict = {
-            'created_at': '2017-09-28T21:05:54.119427',
-            'updated_at': '2017-09-28T21:05:54.119572'
-        }
-        my_created_at = datetime.fromisoformat('2017-09-28T21:05:54.119427')
-        my_updated_at = datetime.fromisoformat('2017-09-28T21:05:54.119572')
-        my_model = BaseModel(**my_dict)
-        self.assertNotEqual(my_model.id, "")
-        uuid_regex = r'^[\da-f]{8}(-[\da-f]{4}){3}-[\da-f]{12}$'
-        self.assertRegex(my_model.id, uuid_regex)
-        self.assertEqual(my_model.created_at, my_created_at)
-        self.assertEqual(my_model.updated_at, my_updated_at)
-
-    def test_no_updated_kwargs(self):
-        """ passing kwargs without updated_at attribute """
-
-        my_dict = {
-            'id': "b6a6e15c-c67d-4312-9a75-9d084935e579",
-            'created_at': '2017-09-28T21:05:54.119427'
-        }
-        my_id = "b6a6e15c-c67d-4312-9a75-9d084935e579"
-        my_created_at = datetime.fromisoformat('2017-09-28T21:05:54.119427')
-        my_model = BaseModel(**my_dict)
-        my_updated_at = datetime.isoformat(my_model.updated_at)
-        isoformat_regex = r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}$'
-        self.assertRegex(my_updated_at, isoformat_regex)
-        self.assertEqual(my_model.id, my_id)
-        self.assertEqual(my_model.created_at, my_created_at)
-
-    def test_no_created_kwargs(self):
-        """ passing kwargs without created_at attribute """
-
-        my_dict = {
-            'id': "b6a6e15c-c67d-4312-9a75-9d084935e579",
-            'updated_at': '2017-09-28T21:05:54.119427'
-        }
-        my_id = "b6a6e15c-c67d-4312-9a75-9d084935e579"
-        my_updated_at = datetime.fromisoformat('2017-09-28T21:05:54.119427')
-        my_model = BaseModel(**my_dict)
-        my_created_at = datetime.isoformat(my_model.created_at)
-        isoformat_regex = r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}$'
-        self.assertRegex(my_created_at, isoformat_regex)
-        self.assertEqual(my_model.id, my_id)
-        self.assertEqual(my_model.updated_at, my_updated_at)
-
-    def test_manual_kwargs(self):
-        """ manually passing kwargs """
-
-        my_id = '17'
-        my_cr = '2017-09-28T21:05:54.119427'
-        my_up = '2017-09-28T21:05:54.119499'
-        my_model = BaseModel(id=my_id, updated_at=my_up, created_at=my_cr)
-        c = datetime(2017, 9, 28, 21, 5, 54, 119427)
-        u = datetime(2017, 9, 28, 21, 5, 54, 119499)
-        self.assertEqual(my_model.id, '17')
-        self.assertEqual(my_model.created_at, c)
-        self.assertEqual(my_model.updated_at, u)
-
-    def test_updated_gt_created(self):
-        """ tests if updated_at is greater than created_at """
-
-        my_model = BaseModel()
-        self.assertTrue(my_model.updated_at >= my_model.created_at)
-
-    def test_not_isoformat(self):
-        """ passing kwargs with wrong isoformat of datetime """
-
-        my_dict = {
-            'created_at': '2017/09/28S21-05-54:119427',
-            'updated_at': '2017-09-28T21:05:54.119572'
-        }
-        with self.assertRaises(ValueError) as excpt:
-            my_model = BaseModel(**my_dict)
-        excpt_msg = "Invalid isoformat string: '2017/09/28S21-05-54:119427'"
-        self.assertEqual(str(excpt.exception), excpt_msg)
-        my_dict = {
-            'created_at': '2017-09-28T21:05:54.119572',
-            'updated_at': 'today'
-        }
-        with self.assertRaises(ValueError) as excpt:
-            my_model = BaseModel(**my_dict)
-        excpt_msg = "Invalid isoformat string: 'today'"
-        self.assertEqual(str(excpt.exception), excpt_msg)
-
-    def test_str_00(self):
-        """ tests __str__ method """
-
-        my_dict = {
-            'id': "b6a6e15c-c67d-4312-9a75-9d084935e579",
-            'created_at': '2017-09-28T21:05:54.119427',
-            'updated_at': '2017-09-28T21:05:54.119572'
-        }
-        my_model = BaseModel(**my_dict)
-        my_str = "[BaseModel] (b6a6e15c-c67d-4312-9a75-9d084935e579) "
-        my_str += "{'id': 'b6a6e15c-c67d-4312-9a75-9d084935e579', "
-        my_str += "'created_at': "
-        my_str += "datetime.datetime(2017, 9, 28, 21, 5, 54, 119427), "
-        my_str += "'updated_at': "
-        my_str += "datetime.datetime(2017, 9, 28, 21, 5, 54, 119572)}"
-        self.assertEqual(my_model.__str__(), my_str)
-        my_model = BaseModel()
-        my_str = "[BaseModel] (" + my_model.id + ") "
-        my_str += str(my_model.__dict__)
-        self.assertEqual(my_model.__str__(), my_str)
-
-    def test_str_01(self):
-        """ tests __str__ method after adding more attributes """
-
-        my_dict = {
-            'id': "b6a6e15c-c67d-4312-9a75-9d084935e579",
-            'created_at': '2017-09-28T21:05:54.119427',
-            'updated_at': '2017-09-28T21:05:54.119572',
-        }
-        my_model = BaseModel(**my_dict)
-        my_model.name = 'Betty'
-        my_model.number = 125
-        my_str = "[BaseModel] (b6a6e15c-c67d-4312-9a75-9d084935e579) "
-        my_str += "{'id': 'b6a6e15c-c67d-4312-9a75-9d084935e579', "
-        my_str += "'created_at': "
-        my_str += "datetime.datetime(2017, 9, 28, 21, 5, 54, 119427), "
-        my_str += "'updated_at': "
-        my_str += "datetime.datetime(2017, 9, 28, 21, 5, 54, 119572), "
-        my_str += "'name': 'Betty', "
-        my_str += "'number': 125}"
-        self.assertEqual(my_model.__str__(), my_str)
-        my_model = BaseModel()
-        my_str = "[BaseModel] (" + my_model.id + ") "
-        my_str += str(my_model.__dict__)
-        self.assertEqual(my_model.__str__(), my_str)
-
-    def test_save00(self):
-        """ test to ensure that updated_at is really updated """
-
-        my_model = BaseModel()
-        last_updated = my_model.updated_at
-        my_model.save()
-        self.assertGreater(my_model.updated_at, last_updated)
-
-    def test_save01(self):
-        """ see if file.json exists after the call """
-
-        my_model = BaseModel()
-        my_model.save()
-        self.assertTrue(os.path.exists('file.json'))
-
-    def test_save02(self):
-        """ see if file.json contains the write output """
-
-        my_model = BaseModel()
-        my_id = "BaseModel." + my_model.id
-        my_model.save()
-        my_dict = {}
-        my_dict[my_id] = my_model.to_dict()
-        my_json = json.dumps(my_dict)
-        with open('file.json', 'r', encoding='utf-8') as f:
-            text_in_file = f.read()
-        self.maxDiff = None
-        self.assertEqual(text_in_file, my_json)
-
-    def test_todect00(self):
-        """ tests the output of a normal call """
-
-        my_model = BaseModel()
-        my_dict = {
-            'id': my_model.id,
-            'created_at': datetime.isoformat(my_model.created_at),
-            'updated_at': datetime.isoformat(my_model.updated_at),
-            '__class__': 'BaseModel'
-        }
-        self.assertEqual(my_model.to_dict(), my_dict)
-
-    def test_todect01(self):
-        """ tests the output after adding more attributes """
-
-        my_model = BaseModel()
-        my_model.name = 'Betty'
-        my_model.number = 145
-        my_dict = {
-            'id': my_model.id,
-            'created_at': datetime.isoformat(my_model.created_at),
-            'updated_at': datetime.isoformat(my_model.updated_at),
-            '__class__': 'BaseModel',
-            'name': 'Betty',
-            'number': 145
-        }
-        self.assertEqual(my_model.to_dict(), my_dict)
-
-    def test_todect02(self):
-        """ exporting a dict and use it to init a new BaseModel """
-
-        my_model = BaseModel(id='15')
-        my_model_dict = my_model.to_dict()
-        new_model = BaseModel(**my_model_dict)
-        self.assertEqual(my_model.id, new_model.id)
-        self.assertEqual(my_model.updated_at, new_model.updated_at)
-        self.assertEqual(my_model.created_at, new_model.created_at)
-
-    def test_todect_with_args(self):
-        """ passing one argument to to_dict (with self) """
-
-        my_model = BaseModel()
-        with self.assertRaises(TypeError) as excpt:
-            my_model.to_dict(15)
-        excpt_msg = "to_dict() takes 1 positional argument but 2 were given"
-        self.assertEqual(str(excpt.exception), excpt_msg)
-
-    def test_save_with_args(self):
-        """ passing 1 argument to save (with self) """
-
-        my_model = BaseModel()
-        with self.assertRaises(TypeError) as excpt:
-            my_model.save(15)
-        excpt_msg = "save() takes 1 positional argument but 2 were given"
-        self.assertEqual(str(excpt.exception), excpt_msg)
+    def test_str_method(self):
+        """Testing returns STR method"""
+        instance6 = BaseModel()
+        string_output = "[BaseModel] ({}) {}".format(instance6.id,
+                                                     instance6.__dict__)
+        self.assertEqual(string_output, str(instance6))
 
 
-if __name__ == '__main__':
+class TestCodeFormat(unittest.TestCase):
+    """
+    A class to test pep8 on base_model file"""
+    def test_pycodestyle(self):
+        """
+        Test pep8 format
+        """
+        pycostyle = pycodestyle.StyleGuide(quiet=True)
+        result = pycostyle.check_files(['models/base_model.py'])
+        self.assertEqual(result.total_errors, 0,
+                         "Found code style errors (and warnings).")
+
+
+class Test_docstrings(unittest.TestCase):
+    """Test docstrings"""
+    @classmethod
+    def setup_class(self):
+        """
+        inspect.getmembers(object, [predicate])
+        Return all the members of an object in a list of (name, value)
+        pairs sorted by name
+        only members for which the predicate returns a true value are included
+        """
+        self.obj_members(BaseModel, inspect.isfunction)
+
+
+class TestBaseModel(unittest.TestCase):
+    """this will test the base model class x"""
+
+    @classmethod
+    def setUpClass(cls):
+        """setup for the test"""
+        cls.base = BaseModel()
+        cls.base.name = "Kev"
+        cls.base.num = 20
+
+    @classmethod
+    def teardown(cls):
+        """at the end of the test this will tear it down"""
+        del cls.base
+
+    def tearDown(self):
+        """teardown"""
+        try:
+            os.remove("file.json")
+        except Exception:
+            pass
+
+    def test_pep8_BaseModel(self):
+        """Testing for pep8"""
+        style = pep8.StyleGuide(quiet=True)
+        p = style.check_files(['models/base_model.py'])
+        self.assertEqual(p.total_errors, 0, "fix pep8")
+
+    def test_checking_for_docstring_BaseModel(self):
+        """checking for docstrings"""
+        self.assertIsNotNone(BaseModel.__doc__)
+        self.assertIsNotNone(BaseModel.__init__.__doc__)
+        self.assertIsNotNone(BaseModel.__str__.__doc__)
+        self.assertIsNotNone(BaseModel.save.__doc__)
+        self.assertIsNotNone(BaseModel.to_dict.__doc__)
+
+    def test_method_BaseModel(self):
+        """chekcing if Basemodel have methods"""
+        self.assertTrue(hasattr(BaseModel, "__init__"))
+        self.assertTrue(hasattr(BaseModel, "save"))
+        self.assertTrue(hasattr(BaseModel, "to_dict"))
+
+    def test_init_BaseModel(self):
+        """test if the base is an type BaseModel"""
+        self.assertTrue(isinstance(self.base, BaseModel))
+
+    def test_save_BaesModel(self):
+        """test if the save works"""
+        self.base.save()
+        self.assertNotEqual(self.base.created_at, self.base.updated_at)
+
+    def test_to_dict_BaseModel(self):
+        """test if dictionary works"""
+        base_dict = self.base.to_dict()
+        self.assertEqual(self.base.__class__.__name__, 'BaseModel')
+        self.assertIsInstance(base_dict['created_at'], str)
+        self.assertIsInstance(base_dict['updated_at'], str)
+
+
+if __name__ == "__main__":
     unittest.main()
